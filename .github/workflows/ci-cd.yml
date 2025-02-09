@@ -1,0 +1,79 @@
+name: Deploy Full Stack .NET/Frontend 
+
+on:
+  push:
+    branches: [ "main" ] # Or master
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x' # Version
+
+      - name: Restore dependencies
+        run: 
+          cd ./backend &&
+          dotnet restore
+
+      - name: Build
+        run: 
+          cd ./backend &&
+          dotnet build --no-restore
+
+      - name: Test
+        run: 
+          cd ./backend &&
+          dotnet test --no-build --verbosity normal
+
+      - name: Publish
+        run: 
+          cd ./backend &&
+          dotnet publish -c Release -o ./publish
+      
+      - name: Build and deploy to Azure
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'image-gallery-backend'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} # Retrieve from Azure portal
+          package: ./backend/publish
+
+  deploy-frontend:
+    needs: deploy-backend  # Only deploy frontend if backend succeeds
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: |
+          cd ./frontend  
+          npm install
+          
+      - name: Build
+        run: |
+          cd ./frontend
+          npm run build 
+          
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: './frontend/dist/frontend/browser'  # Adjust this path to your build output
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 1
