@@ -38,7 +38,7 @@ jobs:
       - name: Build and deploy to Azure
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'image-gallery-backend'
+          app-name: 'image-gallery-backend' # REPLACE WITH APP NAME FROM AZURE #
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} # Retrieve from Azure portal
           package: ./backend/publish
 
